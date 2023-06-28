@@ -64,3 +64,131 @@ function startApp() {
       }
     });
 }
+
+function viewEmployees() {
+    connection.query(
+      `SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name AS department, roles.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
+      FROM employees 
+      LEFT JOIN roles ON employees.role_id = roles.id 
+      LEFT JOIN departments ON roles.department_id = departments.id 
+      LEFT JOIN employees manager ON employees.manager_id = manager.id`,
+      (err, employees) => {
+        if (err) throw err;
+        console.table(employees);
+        startApp();
+      }
+    );
+  }
+
+  function addEmployee() {
+    connection.query('SELECT * FROM roles', (err, roles) => {
+      if (err) throw err;
+  
+      connection.query(
+        `SELECT employees.id, CONCAT(employees.first_name, ' ', employees.last_name) AS manager 
+        FROM employees 
+        WHERE employees.manager_id IS NULL`,
+        (err, managers) => {
+          if (err) throw err;
+  
+          inquirer
+            .prompt([
+              {
+                type: 'input',
+                name: 'firstName',
+                message: "Enter the employee's first name:",
+              },
+              {
+                type: 'input',
+                name: 'lastName',
+                message: "Enter the employee's last name:",
+              },
+              {
+                type: 'list',
+                name: 'roleId',
+                message: "Select the employee's role:",
+                choices: roles.map((role) => ({
+                  name: role.title,
+                  value: role.id,
+                })),
+              },
+              {
+                type: 'list',
+                name: 'managerId',
+                message: "Select the employee's manager:",
+                choices: managers.map((manager) => ({
+                  name: manager.manager,
+                  value: manager.id,
+                })),
+              },
+            ])
+            .then((answers) => {
+              connection.query(
+                'INSERT INTO employees SET ?',
+                {
+                  first_name: answers.firstName,
+                  last_name: answers.lastName,
+                  role_id: answers.roleId,
+                  manager_id: answers.managerId,
+                },
+                (err) => {
+                  if (err) throw err;
+                  console.log('Employee added successfully!');
+                  startApp();
+                }
+              );
+            });
+        }
+      );
+    });
+  }
+
+  function updateEmployeeRole() {
+    connection.query('SELECT * FROM employees', (err, employees) => {
+      if (err) throw err;
+  
+      connection.query('SELECT * FROM roles', (err, roles) => {
+        if (err) throw err;
+  
+        inquirer
+          .prompt([
+            {
+              type: 'list',
+              name: 'employeeId',
+              message: 'Select the employee to update:',
+              choices: employees.map((employee) => ({
+                name: `${employee.first_name} ${employee.last_name}`,
+                value: employee.id,
+              })),
+            },
+            {
+              type: 'list',
+              name: 'roleId',
+              message: 'Select the new role for the employee:',
+              choices: roles.map((role) => ({
+                name: role.title,
+                value: role.id,
+              })),
+            },
+          ])
+          .then((answers) => {
+            connection.query(
+              'UPDATE employees SET ? WHERE ?',
+              [
+                {
+                  role_id: answers.roleId,
+                },
+                {
+                  id: answers.employeeId,
+                },
+              ],
+              (err) => {
+                if (err) throw err;
+                console.log('Employee role updated successfully!');
+                startApp();
+              }
+            );
+          });
+      });
+    });
+  }
