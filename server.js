@@ -247,3 +247,35 @@ function viewEmployees() {
         });
     });
   }
+
+  function viewDepartments() {
+    connection.query('SELECT * FROM departments', (err, departments) => {
+      if (err) throw err;
+      console.table(departments);
+      startApp();
+    });
+  }
+
+  function addDepartment() {
+    inquirer
+      .prompt([
+        {
+          type: 'input',
+          name: 'name',
+          message: 'Enter the name of the department:',
+        },
+      ])
+      .then((answers) => {
+        connection.query(
+          'INSERT INTO departments SET ?',
+          {
+            name: answers.name,
+          },
+          (err) => {
+            if (err) throw err;
+            console.log('Department added successfully!');
+            startApp();
+          }
+        );
+      });
+  }
