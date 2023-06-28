@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {    
+    "inquirer": "^8.2.4",
+    "mysql2": "^2.2.1"   
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+}
+}
