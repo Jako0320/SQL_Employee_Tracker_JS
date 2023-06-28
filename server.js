@@ -192,3 +192,58 @@ function viewEmployees() {
       });
     });
   }
+
+  function viewRoles() {
+    connection.query(
+      'SELECT roles.*, departments.name AS department_name FROM roles JOIN departments ON roles.department_id = departments.id',
+      (err, roles) => {
+        if (err) throw err;
+        console.table(roles);
+        startApp();
+      }
+    );
+  }
+
+  function addRole() {
+    connection.query('SELECT * FROM departments', (err, departments) => {
+      if (err) throw err;
+  
+      inquirer
+        .prompt([
+          {
+            type: 'input',
+            name: 'title',
+            message: 'Enter the title of the role:',
+          },
+          {
+            type: 'input',
+            name: 'salary',
+            message: 'Enter the salary of the role:',
+          },
+          {
+            type: 'list',
+            name: 'departmentId',
+            message: 'Select which department the role belongs to:',
+            choices: departments.map((department) => ({
+              name: department.name,
+              value: department.id,
+            })),
+          },
+        ])
+        .then((answers) => {
+          connection.query(
+            'INSERT INTO roles SET ?',
+            {
+              title: answers.title,
+              salary: answers.salary,
+              department_id: answers.departmentId,
+            },
+            (err) => {
+              if (err) throw err;
+              console.log('Role added successfully!');
+              startApp();
+            }
+          );
+        });
+    });
+  }
