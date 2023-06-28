@@ -1,6 +1,8 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
+const figlet = require('figlet');
 
+//MySQL server connection configuration
 const connection = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -8,12 +10,23 @@ const connection = mysql.createConnection({
   database: "employee_db",
 });
 
-connection.connect((err) => {
-  if (err) throw err;
-  console.log("Connected to MySQL server!");
-  startApp();
-});
+//ASCII Title generation function
+function displayASCII() {
+  figlet('Employee\nManager\n1989 V1.0', (err, data) => {
+    if (err) throw err;
+    console.log('\n' + data);
+    startApp();
+  });
+}
 
+//MySQL server connection
+connection.connect((err) => {
+    if (err) throw err;
+    console.log('Connected to MySQL server!');
+    displayASCII();
+  });
+
+//Menu function
 function startApp() {
   inquirer
     .prompt({
@@ -24,7 +37,7 @@ function startApp() {
         "View all employees",
         "Add an employee",
         "Update an employee role",
-        "Update employee managers",
+        "Update an employee manager",
         "View employees by manager",
         "View employees by department",
         "View all roles",
@@ -32,7 +45,6 @@ function startApp() {
         "View all departments",
         "View total utilized budget of a department",
         "Add a department",
-        "Delete departments, roles, and employees",
         "Quit",
       ],
     })
@@ -70,10 +82,7 @@ function startApp() {
           break;
         case "Add a department":
           addDepartment();
-          break;
-        case "Delete departments, roles, and employees":
-          deleteData();
-          break;
+          break;        
         case "Quit":
           connection.end();
           console.log("Mischief managed!");
@@ -84,7 +93,7 @@ function startApp() {
       }
     });
 }
-
+//Generate table with list of all employees
 function viewEmployees() {
   connection.query(
     `SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.name AS department, roles.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
@@ -100,6 +109,7 @@ function viewEmployees() {
   );
 }
 
+//Function to add an employee
 function addEmployee() {
   connection.query("SELECT * FROM roles", (err, roles) => {
     if (err) throw err;
@@ -139,7 +149,7 @@ function addEmployee() {
               choices: managers.map((manager) => ({
                 name: manager.manager,
                 value: manager.id,
-              })),
+              })),             
             },
           ])
           .then((answers) => {
@@ -163,6 +173,7 @@ function addEmployee() {
   });
 }
 
+//Function to update an existing employee role
 function updateEmployeeRole() {
   connection.query("SELECT * FROM employees", (err, employees) => {
     if (err) throw err;
@@ -213,6 +224,7 @@ function updateEmployeeRole() {
   });
 }
 
+//Function to update an existing employee manager
 function updateEmployeeManager() {
   connection.query("SELECT * FROM employees", (err, employees) => {
     if (err) throw err;
@@ -235,7 +247,7 @@ function updateEmployeeManager() {
           choices: employees.map((employee) => ({
             name: `${employee.first_name} ${employee.last_name}`,
             value: employee.id,
-          })),
+          })),       
         },
       ])
       .then((answers) => {
@@ -258,7 +270,7 @@ function updateEmployeeManager() {
       });
   });
 }
-
+//Function to view all employees by manager
 function viewEmployeesByManager() {
   connection.query(
     `SELECT CONCAT(manager.first_name, ' ', manager.last_name) AS manager, employees.id, employees.first_name, employees.last_name, roles.title, departments.name AS department, roles.salary 
@@ -274,7 +286,7 @@ function viewEmployeesByManager() {
     }
   );
 }
-
+//Function to view all employees by department
 function viewEmployeesByDepartment() {
   connection.query(
     `SELECT departments.name AS department, employees.id, employees.first_name, employees.last_name, roles.title, roles.salary 
@@ -290,6 +302,7 @@ function viewEmployeesByDepartment() {
   );
 }
 
+//Generate table with list of all roles
 function viewRoles() {
   connection.query(
     "SELECT roles.*, departments.name AS department_name FROM roles JOIN departments ON roles.department_id = departments.id",
@@ -300,7 +313,7 @@ function viewRoles() {
     }
   );
 }
-
+//Function to add a role
 function addRole() {
   connection.query("SELECT * FROM departments", (err, departments) => {
     if (err) throw err;
@@ -345,6 +358,7 @@ function addRole() {
   });
 }
 
+//Generate table with list of all departments
 function viewDepartments() {
   connection.query("SELECT * FROM departments", (err, departments) => {
     if (err) throw err;
@@ -353,6 +367,7 @@ function viewDepartments() {
   });
 }
 
+//Generate table with sum of all employee salaries by department
 function viewBudget() {
   connection.query(
     `SELECT departments.name AS department, SUM(roles.salary) AS utilized_budget 
@@ -368,6 +383,7 @@ function viewBudget() {
   );
 }
 
+//Function to add a department
 function addDepartment() {
   inquirer
     .prompt([
@@ -390,128 +406,4 @@ function addDepartment() {
         }
       );
     });
-}
-
-function deleteData() {
-  inquirer
-    .prompt([
-      {
-        type: "list",
-        name: "table",
-        message: "Select the data to delete:",
-        choices: ["Departments", "Roles", "Employees"],
-      },
-    ])
-    .then((answers) => {
-      switch (answers.table) {
-        case "Departments":
-          deleteDepartment();
-          break;
-        case "Roles":
-          deleteRole();
-          break;
-        case "Employees":
-          deleteEmployee();
-          break;
-        default:
-          console.log("Invalid choice. Please try again.");
-          startApp();
-      }
-    });
-}
-
-function deleteDepartment() {
-  connection.query("SELECT * FROM departments", (err, departments) => {
-    if (err) throw err;
-
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "departmentId",
-          message: "Select the department to delete:",
-          choices: departments.map((department) => ({
-            name: department.name,
-            value: department.id,
-          })),
-        },
-      ])
-      .then((answers) => {
-        connection.query(
-          "DELETE FROM departments WHERE ?",
-          {
-            id: answers.departmentId,
-          },
-          (err) => {
-            if (err) throw err;
-            console.log("Department deleted successfully!");
-            startApp();
-          }
-        );
-      });
-  });
-}
-
-function deleteRole() {
-  connection.query("SELECT * FROM roles", (err, roles) => {
-    if (err) throw err;
-
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "roleId",
-          message: "Select the role to delete:",
-          choices: roles.map((role) => ({
-            name: role.title,
-            value: role.id,
-          })),
-        },
-      ])
-      .then((answers) => {
-        connection.query(
-          "DELETE FROM roles WHERE ?",
-          {
-            id: answers.roleId,
-          },
-          (err) => {
-            if (err) throw err;
-            console.log("Role deleted successfully!");
-            startApp();
-          }
-        );
-      });
-  });
-}
-
-function deleteEmployee() {
-  connection.query("SELECT * FROM employees", (err, employees) => {
-    if (err) throw err;
-
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "employeeId",
-          message: "Select the employee to delete:",
-          choices: employees.map((employee) => ({
-            name: `${employee.first_name} ${employee.last_name}`,
-            value: employee.id,
-          })),
-        },
-      ])
-      .then((answers) => {
-        connection.query(
-          "DELETE FROM employees WHERE ?",
-          {
-            id: answers.employeeId,
-          },
-          (err) => {
-            if (err) throw err;
-            console.log("Employee deleted successfully!");
-            startApp();
-          }
-        );
-      });
-  });
 }
